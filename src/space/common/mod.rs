@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use nom::{
   branch::alt,
-  bytes::complete::tag,
+  bytes::complete::tag_no_case,
   character::complete::multispace1,
   combinator::{cut, map, opt, value},
   multi::many1,
@@ -21,11 +21,12 @@ pub mod expression;
 pub mod region;
 pub mod velocity;
 
+use crate::space::common::region::RegionEnum;
 use crate::{common::SpaceTimeRefPos as RefPos, NomErr};
 use velocity::Velocity;
 
 /// `Ecliptic` assume to have epoch `J2000` with respect to `ICRS`.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
 pub enum Frame {
   ICRS,
   FK5,
@@ -50,18 +51,18 @@ pub enum Frame {
 impl Frame {
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     alt((
-      value(Self::ICRS, tag("ICRS")),
-      value(Self::FK5, tag("FK5")),
-      value(Self::FK4, tag("FK4")),
-      value(Self::J2000, tag("J2000")),
-      value(Self::B1950, tag("B1950")),
-      value(Self::Ecliptic, tag("ECLIPTIC")),
-      value(Self::Galactic2, tag("GALACTIC_II")),
-      value(Self::Galactic, tag("GALACTIC")),
-      value(Self::SuperGalactic, tag("SUPER_GALACTIC")),
-      value(Self::GeoC, tag("GEO_C")),
-      value(Self::GeoD, tag("GEO_D")),
-      value(Self::UnknownFrame, tag("UNKNOWNFrame")),
+      value(Self::ICRS, tag_no_case("ICRS")),
+      value(Self::FK5, tag_no_case("FK5")),
+      value(Self::FK4, tag_no_case("FK4")),
+      value(Self::J2000, tag_no_case("J2000")),
+      value(Self::B1950, tag_no_case("B1950")),
+      value(Self::Ecliptic, tag_no_case("ECLIPTIC")),
+      value(Self::Galactic2, tag_no_case("GALACTIC_II")),
+      value(Self::Galactic, tag_no_case("GALACTIC")),
+      value(Self::SuperGalactic, tag_no_case("SUPER_GALACTIC")),
+      value(Self::GeoC, tag_no_case("GEO_C")),
+      value(Self::GeoD, tag_no_case("GEO_D")),
+      value(Self::UnknownFrame, tag_no_case("UNKNOWNFrame")),
     ))(input)
   }
 }
@@ -105,8 +106,7 @@ impl Display for Frame {
   }
 }
 
-/// The default value is `SPHER2`, except for `Convex`, where the default is `UNITSPHER`.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
 pub enum Flavor {
   #[serde(rename = "SPHER2")]
   Spher2,
@@ -133,14 +133,36 @@ impl Flavor {
       Self::Spher3 => 3,
     }
   }
+  /// The default value is `SPHER2`, except for `Convex`, where the default is `UNITSPHER`.
+  pub fn default(region: RegionEnum) -> Self {
+    match region {
+      RegionEnum::Convex(_) => Flavor::UnitSpher,
+      _ => Flavor::Spher2,
+    }
+  }
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     alt((
-      value(Self::Spher2, alt((tag("SPHER2"), tag("SPHERICAL2")))),
-      value(Self::UnitSpher, tag("UNITSPHER")),
-      value(Self::Cart1, alt((tag("CART1"), tag("CARTESIAN1")))),
-      value(Self::Cart2, alt((tag("CART2"), tag("CARTESIAN2")))),
-      value(Self::Cart3, alt((tag("CART3"), tag("CARTESIAN3")))),
-      value(Self::Spher3, alt((tag("SPHER3"), tag("SPHERICAL3")))),
+      value(
+        Self::Spher2,
+        alt((tag_no_case("SPHER2"), tag_no_case("SPHERICAL2"))),
+      ),
+      value(Self::UnitSpher, tag_no_case("UNITSPHER")),
+      value(
+        Self::Cart1,
+        alt((tag_no_case("CART1"), tag_no_case("CARTESIAN1"))),
+      ),
+      value(
+        Self::Cart2,
+        alt((tag_no_case("CART2"), tag_no_case("CARTESIAN2"))),
+      ),
+      value(
+        Self::Cart3,
+        alt((tag_no_case("CART3"), tag_no_case("CARTESIAN3"))),
+      ),
+      value(
+        Self::Spher3,
+        alt((tag_no_case("SPHER3"), tag_no_case("SPHERICAL3"))),
+      ),
     ))(input)
   }
 }
@@ -179,7 +201,7 @@ impl Display for Flavor {
 /// The default value for spherical coordinates, except `GEO`, is `deg`;
 /// for `GEO`: `deg deg m`; for Cartesian coordinates: `m`.
 /// For multi-dimensional frames one may specify a unit for each axis, such as `deg deg m`.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
 pub enum SpaceUnit {
   #[serde(rename = "deg")]
   Deg,
@@ -203,16 +225,16 @@ pub enum SpaceUnit {
 impl SpaceUnit {
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     alt((
-      value(Self::Deg, tag("deg")),
-      value(Self::Arcmin, tag("arcmin")),
-      value(Self::Arcsec, tag("arcsec")),
-      value(Self::Mm, tag("mm")),
-      value(Self::M, tag("m")),
-      value(Self::Km, tag("km")),
-      value(Self::AU, tag("AU")),
-      value(Self::Pc, tag("pc")),
-      value(Self::Kpc, tag("kpc")),
-      value(Self::Mpc, tag("Mpc")),
+      value(Self::Deg, tag_no_case("deg")),
+      value(Self::Arcmin, tag_no_case("arcmin")),
+      value(Self::Arcsec, tag_no_case("arcsec")),
+      value(Self::Mm, tag_no_case("mm")),
+      value(Self::M, tag_no_case("m")),
+      value(Self::Km, tag_no_case("km")),
+      value(Self::AU, tag_no_case("AU")),
+      value(Self::Pc, tag_no_case("pc")),
+      value(Self::Kpc, tag_no_case("kpc")),
+      value(Self::Mpc, tag_no_case("Mpc")),
     ))(input)
   }
 }
@@ -286,6 +308,9 @@ impl FrameRefposFlavor {
   pub fn from_frame(frame: Frame) -> Self {
     Self::new(frame, None, None)
   }
+
+  // Setters
+
   pub fn set_refpos(mut self, refpos: RefPos) -> Self {
     self.set_refpos_by_ref(refpos);
     self
@@ -294,21 +319,32 @@ impl FrameRefposFlavor {
     self.set_flavor_by_ref(flavor);
     self
   }
+
+  // Setters by ref
+
   pub fn set_refpos_by_ref(&mut self, refpos: RefPos) {
     self.refpos = Some(refpos);
   }
   pub fn set_flavor_by_ref(&mut self, flavor: Flavor) {
     self.flavor = Some(flavor);
   }
-  pub fn frame(&self) -> &Frame {
-    &self.frame
+
+  // Getters
+
+  pub fn frame(&self) -> Frame {
+    self.frame
   }
-  pub fn refpos(&self) -> Option<&RefPos> {
-    self.refpos.as_ref()
+  pub fn refpos(&self) -> Option<RefPos> {
+    self.refpos
   }
-  pub fn flavor(&self) -> Option<&Flavor> {
-    self.flavor.as_ref()
+  pub fn refpos_or_default(&self) -> RefPos {
+    self.refpos.unwrap_or_default()
   }
+  pub fn flavor(&self) -> Option<Flavor> {
+    self.flavor
+  }
+  // impl flavor_or_default for each geometry ?!
+
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     map(
       tuple((
@@ -359,6 +395,9 @@ impl FillFrameRefposFlavor {
   pub fn from_frame(frame: Frame) -> Self {
     Self::new(None, frame, None, None)
   }
+
+  // Setters
+
   pub fn set_fillfactor(mut self, fillfactor: f64) -> Self {
     self.set_fillfactor_by_ref(fillfactor);
     self
@@ -371,6 +410,9 @@ impl FillFrameRefposFlavor {
     self.set_flavor_by_ref(flavor);
     self
   }
+
+  // Setters by ref
+
   pub fn set_fillfactor_by_ref(&mut self, fillfactor: f64) {
     self.fillfactor = Some(fillfactor);
   }
@@ -380,24 +422,34 @@ impl FillFrameRefposFlavor {
   pub fn set_flavor_by_ref(&mut self, flavor: Flavor) {
     self.frame_refpos_flavor.set_flavor_by_ref(flavor);
   }
+
+  // Getters
+
   pub fn fillfactor(&self) -> Option<f64> {
     self.fillfactor
   }
-  pub fn frame(&self) -> &Frame {
+  pub fn fillfactor_or_default(&self) -> f64 {
+    self.fillfactor.unwrap_or(1.0)
+  }
+  pub fn frame(&self) -> Frame {
     self.frame_refpos_flavor.frame()
   }
-  pub fn refpos(&self) -> Option<&RefPos> {
+  pub fn refpos(&self) -> Option<RefPos> {
     self.frame_refpos_flavor.refpos()
   }
-  pub fn flavor(&self) -> Option<&Flavor> {
+  pub fn refpos_or_default(&self) -> RefPos {
+    self.frame_refpos_flavor.refpos_or_default()
+  }
+  pub fn flavor(&self) -> Option<Flavor> {
     self.frame_refpos_flavor.flavor()
   }
+
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     map(
       tuple((
         // fillfactor
         opt(preceded(
-          delimited(multispace1, tag("fillfactor"), multispace1),
+          delimited(multispace1, tag_no_case("fillfactor"), multispace1),
           cut(double),
         )),
         // frame
@@ -411,7 +463,151 @@ impl FillFrameRefposFlavor {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
+pub struct FromUnitToVelocity {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub unit: Option<Vec<SpaceUnit>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  /// Multiple errors possible.
+  pub error: Option<Vec<f64>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  /// Multiple resolutions possible.
+  pub resolution: Option<Vec<f64>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  /// Multiple sizes possible
+  pub size: Option<Vec<f64>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  /// Multiple pixsizes possible
+  pub pixsize: Option<Vec<f64>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub velocity: Option<Velocity>,
+}
+impl FromUnitToVelocity {
+  pub fn new() -> Self {
+    Self::default()
+  }
+
+  // Setters by ref
+  pub fn set_unit_by_ref(&mut self, units: Vec<SpaceUnit>) {
+    self.unit.replace(units);
+  }
+  pub fn set_error_by_ref(&mut self, error: Vec<f64>) {
+    self.error.replace(error);
+  }
+  pub fn set_resolution_by_ref(&mut self, resolution: Vec<f64>) {
+    self.resolution.replace(resolution);
+  }
+  pub fn set_size_by_ref(&mut self, size: Vec<f64>) {
+    self.size.replace(size);
+  }
+  pub fn set_pixsize_by_ref(&mut self, pixsize: Vec<f64>) {
+    self.pixsize.replace(pixsize);
+  }
+  pub fn set_velocity_by_ref(&mut self, velocity: Velocity) {
+    self.velocity.replace(velocity);
+  }
+
+  // Getters
+  pub fn unit(&self) -> Option<&Vec<SpaceUnit>> {
+    self.unit.as_ref()
+  }
+  pub fn error(&self) -> Option<&Vec<f64>> {
+    self.error.as_ref()
+  }
+  pub fn resolution(&self) -> Option<&Vec<f64>> {
+    self.resolution.as_ref()
+  }
+  pub fn size(&self) -> Option<&Vec<f64>> {
+    self.size.as_ref()
+  }
+  pub fn pixsize(&self) -> Option<&Vec<f64>> {
+    self.pixsize.as_ref()
+  }
+
+  pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
+    map(
+      tuple((
+        // unit
+        opt(preceded(
+          preceded(multispace1, tag_no_case("unit")),
+          cut(many1(preceded(multispace1, SpaceUnit::parse::<E>))),
+        )),
+        // error
+        opt(preceded(
+          preceded(multispace1, tag_no_case("Error")),
+          cut(many1(preceded(multispace1, double))),
+        )),
+        // resolution
+        opt(preceded(
+          preceded(multispace1, tag_no_case("Resolution")),
+          cut(many1(preceded(multispace1, double))),
+        )),
+        // size
+        opt(preceded(
+          preceded(multispace1, tag_no_case("Size")),
+          cut(many1(preceded(multispace1, double))),
+        )),
+        // pixsize
+        opt(preceded(
+          preceded(multispace1, tag_no_case("PixSize")),
+          cut(many1(preceded(multispace1, double))),
+        )),
+        // velocity
+        opt(preceded(multispace1, Velocity::parse)),
+      )),
+      |(unit, error, resolution, size, pixsize, velocity)| Self {
+        unit,
+        error,
+        resolution,
+        size,
+        pixsize,
+        velocity,
+      },
+    )(input)
+  }
+}
+impl Display for FromUnitToVelocity {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    if let Some(unit) = self.unit.as_ref() {
+      f.write_str(" unit")?;
+      for u in unit {
+        f.write_fmt(format_args!(" {}", u))?;
+      }
+    }
+    if let Some(errors) = self.error.as_ref() {
+      f.write_str(" Error")?;
+      for e in errors {
+        f.write_fmt(format_args!(" {}", e))?;
+      }
+    }
+    if let Some(resolutions) = self.resolution.as_ref() {
+      f.write_str(" Resolution")?;
+      for r in resolutions {
+        f.write_fmt(format_args!(" {}", r))?;
+      }
+    }
+    if let Some(sizes) = self.size.as_ref() {
+      f.write_str(" Size")?;
+      for p in sizes {
+        f.write_fmt(format_args!(" {}", p))?;
+      }
+    }
+    if let Some(pixsizes) = self.pixsize.as_ref() {
+      f.write_str(" PixSize")?;
+      for p in pixsizes {
+        f.write_fmt(format_args!(" {}", p))?;
+      }
+    }
+    if let Some(velocity) = self.velocity.as_ref() {
+      velocity.fmt(f)
+    } else {
+      Ok(())
+    }
+  }
+}
+
+// TODO: replace all elems except 'position' by FromUnitToVelocity.
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
 pub struct FromPosToVelocity {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub position: Option<Vec<f64>>,
@@ -433,37 +629,86 @@ pub struct FromPosToVelocity {
   pub velocity: Option<Velocity>,
 }
 impl FromPosToVelocity {
+  pub fn new() -> Self {
+    Self::default()
+  }
+
+  // Setters by ref
+
+  pub fn set_position_by_ref(&mut self, position: Vec<f64>) {
+    self.position.replace(position);
+  }
+  pub fn set_unit_by_ref(&mut self, units: Vec<SpaceUnit>) {
+    self.unit.replace(units);
+  }
+  pub fn set_error_by_ref(&mut self, error: Vec<f64>) {
+    self.error.replace(error);
+  }
+  pub fn set_resolution_by_ref(&mut self, resolution: Vec<f64>) {
+    self.resolution.replace(resolution);
+  }
+  pub fn set_size_by_ref(&mut self, size: Vec<f64>) {
+    self.size.replace(size);
+  }
+  pub fn set_pixsize_by_ref(&mut self, pixsize: Vec<f64>) {
+    self.pixsize.replace(pixsize);
+  }
+  pub fn set_velocity_by_ref(&mut self, velocity: Velocity) {
+    self.velocity.replace(velocity);
+  }
+
+  // Getters
+
+  pub fn position(&self) -> Option<&Vec<f64>> {
+    self.position.as_ref()
+  }
+  pub fn unit(&self) -> Option<&Vec<SpaceUnit>> {
+    self.unit.as_ref()
+  }
+  pub fn error(&self) -> Option<&Vec<f64>> {
+    self.error.as_ref()
+  }
+  pub fn resolution(&self) -> Option<&Vec<f64>> {
+    self.resolution.as_ref()
+  }
+  pub fn size(&self) -> Option<&Vec<f64>> {
+    self.size.as_ref()
+  }
+  pub fn pixsize(&self) -> Option<&Vec<f64>> {
+    self.pixsize.as_ref()
+  }
+
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     map(
       tuple((
         // position
         opt(preceded(
-          preceded(multispace1, tag("Position")),
+          preceded(multispace1, tag_no_case("Position")),
           cut(many1(preceded(multispace1, double))),
         )),
         // unit
         opt(preceded(
-          preceded(multispace1, tag("unit")),
+          preceded(multispace1, tag_no_case("unit")),
           cut(many1(preceded(multispace1, SpaceUnit::parse::<E>))),
         )),
         // error
         opt(preceded(
-          preceded(multispace1, tag("Error")),
+          preceded(multispace1, tag_no_case("Error")),
           cut(many1(preceded(multispace1, double))),
         )),
         // resolution
         opt(preceded(
-          preceded(multispace1, tag("Resolution")),
+          preceded(multispace1, tag_no_case("Resolution")),
           cut(many1(preceded(multispace1, double))),
         )),
         // size
         opt(preceded(
-          preceded(multispace1, tag("Size")),
+          preceded(multispace1, tag_no_case("Size")),
           cut(many1(preceded(multispace1, double))),
         )),
         // pixsize
         opt(preceded(
-          preceded(multispace1, tag("PixSize")),
+          preceded(multispace1, tag_no_case("PixSize")),
           cut(many1(preceded(multispace1, double))),
         )),
         // velocity

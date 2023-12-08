@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use nom::{
   branch::alt,
-  bytes::complete::tag,
+  bytes::complete::tag_no_case,
   character::complete::multispace1,
   combinator::{cut, map, opt},
   multi::many0,
@@ -15,14 +15,32 @@ use nom::{
 
 use super::NomErr;
 
+use crate::{
+  common::{SpaceTimeRefPos as RefPos, ValOrRange},
+  visitor::SpectralVisitor,
+};
+
 pub mod common;
-use crate::common::SpaceTimeRefPos as RefPos;
 use common::*;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum Spectral {
   Value(SpecValue),
   Interval(SpecInterval),
+}
+impl Spectral {
+  pub fn accept<V: SpectralVisitor>(&self, visitor: V) -> Result<V::Value, V::Error> {
+    match self {
+      Self::Value(value) => visitor.visit_spectral_simple(value),
+      Self::Interval(interval) => visitor.visit_spectral_interval(interval),
+    }
+  }
+  pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
+    alt((
+      map(SpecInterval::parse::<E>, Self::Interval),
+      map(SpecValue::parse::<E>, Self::Value),
+    ))(input)
+  }
 }
 impl Display for Spectral {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -32,16 +50,18 @@ impl Display for Spectral {
     }
   }
 }
-impl Spectral {
-  pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
-    alt((
-      map(SpecInterval::parse::<E>, Self::Interval),
-      map(SpecValue::parse::<E>, Self::Value),
-    ))(input)
+impl From<SpecValue> for Spectral {
+  fn from(value: SpecValue) -> Self {
+    Self::Value(value)
+  }
+}
+impl From<SpecInterval> for Spectral {
+  fn from(value: SpecInterval) -> Self {
+    Self::Interval(value)
   }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
 pub struct SpecValue {
   refpos: Option<RefPos>,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -50,10 +70,99 @@ pub struct SpecValue {
   unit_to_pixsize: UnitToPixsize,
 }
 impl SpecValue {
+  pub fn new() -> Self {
+    Self::default()
+  }
+
+  // Setters
+
+  pub fn set_refpos(mut self, refpos: RefPos) -> Self {
+    self.set_refpos_by_ref(refpos);
+    self
+  }
+  pub fn set_value(mut self, value: f64) -> Self {
+    self.set_value_by_ref(value);
+    self
+  }
+  pub fn set_unit(mut self, unit: SpectralUnit) -> Self {
+    self.set_unit_by_ref(unit);
+    self
+  }
+  pub fn set_error(mut self, error: ValOrRange) -> Self {
+    self.set_error_by_ref(error);
+    self
+  }
+  pub fn set_resolution(mut self, resolution: ValOrRange) -> Self {
+    self.set_resolution_by_ref(resolution);
+    self
+  }
+  pub fn set_size(mut self, size: ValOrRange) -> Self {
+    self.set_size_by_ref(size);
+    self
+  }
+  pub fn set_pixsize(mut self, pixsize: ValOrRange) -> Self {
+    self.set_pixsize_by_ref(pixsize);
+    self
+  }
+
+  // Setters by ref
+
+  pub fn set_refpos_by_ref(&mut self, refpos: RefPos) {
+    self.refpos.replace(refpos);
+  }
+  pub fn set_value_by_ref(&mut self, value: f64) {
+    self.value.replace(value);
+  }
+  pub fn set_unit_by_ref(&mut self, unit: SpectralUnit) {
+    self.unit_to_pixsize.set_unit_by_ref(unit);
+  }
+  pub fn set_error_by_ref(&mut self, error: ValOrRange) {
+    self.unit_to_pixsize.set_error_by_ref(error);
+  }
+  pub fn set_resolution_by_ref(&mut self, resolution: ValOrRange) {
+    self.unit_to_pixsize.set_resolution_by_ref(resolution);
+  }
+  pub fn set_size_by_ref(&mut self, size: ValOrRange) {
+    self.unit_to_pixsize.set_size_by_ref(size);
+  }
+  pub fn set_pixsize_by_ref(&mut self, pixsize: ValOrRange) {
+    self.unit_to_pixsize.set_pixsize_by_ref(pixsize);
+  }
+
+  // Getters
+
+  pub fn refpos(&self) -> Option<RefPos> {
+    self.refpos
+  }
+  pub fn refpos_or_default(&self) -> RefPos {
+    self.refpos.unwrap_or_default()
+  }
+  pub fn value(&self) -> Option<f64> {
+    self.value
+  }
+  pub fn unit(&self) -> Option<SpectralUnit> {
+    self.unit_to_pixsize.unit()
+  }
+  pub fn unit_or_default(&self) -> SpectralUnit {
+    self.unit_to_pixsize.unit_or_default()
+  }
+  pub fn error(&self) -> Option<&ValOrRange> {
+    self.unit_to_pixsize.error()
+  }
+  pub fn resolution(&self) -> Option<&ValOrRange> {
+    self.unit_to_pixsize.resolution()
+  }
+  pub fn size(&self) -> Option<&ValOrRange> {
+    self.unit_to_pixsize.size()
+  }
+  pub fn pixsize(&self) -> Option<&ValOrRange> {
+    self.unit_to_pixsize.pixsize()
+  }
+
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     map(
       preceded(
-        tag("Spectral"),
+        tag_no_case("Spectral"),
         tuple((
           opt(preceded(multispace1, RefPos::parse::<E>)),
           opt(preceded(multispace1, double)),
@@ -115,19 +224,142 @@ impl Display for SpecInterval {
   }
 }
 impl SpecInterval {
+  pub fn new(lo_limits: Vec<f64>, hi_limits: Vec<f64>) -> Result<Self, String> {
+    if lo_limits.len() == hi_limits.len() {
+      Err(format!(
+        "Error in RedshiftInterval::new(). Lo and Hi limits have different length: {} != {}",
+        lo_limits.len(),
+        hi_limits.len()
+      ))
+    } else {
+      Ok(Self {
+        fillfactor: None,
+        refpos: None,
+        lo_limits,
+        hi_limits,
+        spectral: None,
+        unit_to_pixsize: UnitToPixsize::default(),
+      })
+    }
+  }
+
+  // Setters
+
+  pub fn set_fillfactor(mut self, fillfactor: f64) -> Self {
+    self.set_fillfactor_by_ref(fillfactor);
+    self
+  }
+  pub fn set_refpos(mut self, refpos: RefPos) -> Self {
+    self.set_refpos_by_ref(refpos);
+    self
+  }
+  pub fn set_spectral(mut self, spectral: f64) -> Self {
+    self.set_spectral_by_ref(spectral);
+    self
+  }
+  pub fn set_unit(mut self, unit: SpectralUnit) -> Self {
+    self.set_unit_by_ref(unit);
+    self
+  }
+  pub fn set_error(mut self, error: ValOrRange) -> Self {
+    self.set_error_by_ref(error);
+    self
+  }
+  pub fn set_resolution(mut self, resolution: ValOrRange) -> Self {
+    self.set_resolution_by_ref(resolution);
+    self
+  }
+  pub fn set_size(mut self, size: ValOrRange) -> Self {
+    self.set_size_by_ref(size);
+    self
+  }
+  pub fn set_pixsize(mut self, pixsize: ValOrRange) -> Self {
+    self.set_pixsize_by_ref(pixsize);
+    self
+  }
+
+  // Setters by ref
+
+  pub fn set_fillfactor_by_ref(&mut self, fillfactor: f64) {
+    self.fillfactor.replace(fillfactor);
+  }
+  pub fn set_refpos_by_ref(&mut self, refpos: RefPos) {
+    self.refpos.replace(refpos);
+  }
+  pub fn set_spectral_by_ref(&mut self, spectral: f64) {
+    self.spectral.replace(spectral);
+  }
+  pub fn set_unit_by_ref(&mut self, unit: SpectralUnit) {
+    self.unit_to_pixsize.set_unit_by_ref(unit);
+  }
+  pub fn set_error_by_ref(&mut self, error: ValOrRange) {
+    self.unit_to_pixsize.set_error_by_ref(error);
+  }
+  pub fn set_resolution_by_ref(&mut self, resolution: ValOrRange) {
+    self.unit_to_pixsize.set_resolution_by_ref(resolution);
+  }
+  pub fn set_size_by_ref(&mut self, size: ValOrRange) {
+    self.unit_to_pixsize.set_size_by_ref(size);
+  }
+  pub fn set_pixsize_by_ref(&mut self, pixsize: ValOrRange) {
+    self.unit_to_pixsize.set_pixsize_by_ref(pixsize);
+  }
+
+  // Getters
+
+  pub fn fillfactor(&self) -> Option<f64> {
+    self.fillfactor
+  }
+  pub fn fillfactor_or_default(&self) -> f64 {
+    self.fillfactor().unwrap_or(1.0)
+  }
+  pub fn refpos(&self) -> Option<RefPos> {
+    self.refpos
+  }
+  pub fn refpos_or_default(&self) -> RefPos {
+    self.refpos.unwrap_or_default()
+  }
+  pub fn lo_limits(&self) -> &[f64] {
+    &self.lo_limits
+  }
+  pub fn hi_limits(&self) -> &[f64] {
+    &self.hi_limits
+  }
+  pub fn spectral(&self) -> Option<f64> {
+    self.spectral
+  }
+  pub fn unit(&self) -> Option<SpectralUnit> {
+    self.unit_to_pixsize.unit()
+  }
+  pub fn unit_or_default(&self) -> SpectralUnit {
+    self.unit_to_pixsize.unit_or_default()
+  }
+  pub fn error(&self) -> Option<&ValOrRange> {
+    self.unit_to_pixsize.error()
+  }
+  pub fn resolution(&self) -> Option<&ValOrRange> {
+    self.unit_to_pixsize.resolution()
+  }
+  pub fn size(&self) -> Option<&ValOrRange> {
+    self.unit_to_pixsize.size()
+  }
+  pub fn pixsize(&self) -> Option<&ValOrRange> {
+    self.unit_to_pixsize.pixsize()
+  }
+
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     map(
       preceded(
-        tag("SpectralInterval"),
+        tag_no_case("SpectralInterval"),
         tuple((
           opt(preceded(
-            delimited(multispace1, tag("fillfactor"), multispace1),
+            delimited(multispace1, tag_no_case("fillfactor"), multispace1),
             cut(double),
           )),
           opt(preceded(multispace1, RefPos::parse::<E>)),
           cut(many0(preceded(multispace1, double))),
           opt(preceded(
-            delimited(multispace1, tag("Spectral"), multispace1),
+            delimited(multispace1, tag_no_case("Spectral"), multispace1),
             cut(double),
           )),
           UnitToPixsize::parse::<E>,

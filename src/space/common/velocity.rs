@@ -1,7 +1,7 @@
 use std::fmt::{self, Display};
 
 use nom::{
-  bytes::complete::tag,
+  bytes::complete::tag_no_case,
   character::complete::{char, multispace1},
   combinator::{cut, map, opt},
   multi::{many1, many_m_n},
@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use super::SpaceUnit;
 use crate::{time::common::TimeUnit, NomErr};
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
 pub struct VelocityUnit {
   #[serde(rename = "space_unit")]
   space_unit: SpaceUnit,
@@ -57,7 +57,7 @@ pub struct Velocity {
   lo_hi_limits: Vec<f64>,
   #[serde(skip_serializing_if = "Option::is_none")]
   velocity: Option<Vec<f64>>,
-  /// Default unit: 'm/s' 
+  /// Default unit: 'm/s'
   #[serde(skip_serializing_if = "Option::is_none")]
   unit: Option<Vec<VelocityUnit>>,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -75,10 +75,10 @@ impl Velocity {
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     map(
       preceded(
-        tag("VelocityInterval"),
+        tag_no_case("VelocityInterval"),
         tuple((
           opt(preceded(
-            delimited(multispace1, tag("fillfactor"), cut(multispace1)),
+            delimited(multispace1, tag_no_case("fillfactor"), cut(multispace1)),
             double,
           )),
           cut(many_m_n(2, usize::MAX, preceded(multispace1, double))),
@@ -93,23 +93,23 @@ impl Velocity {
             },
           ),*/
           opt(preceded(
-            preceded(multispace1, tag("Velocity")),
+            preceded(multispace1, tag_no_case("Velocity")),
             cut(many_m_n(1, usize::MAX, preceded(multispace1, double))),
           )),
           opt(preceded(
-            preceded(multispace1, tag("unit")),
+            preceded(multispace1, tag_no_case("unit")),
             cut(many1(preceded(multispace1, VelocityUnit::parse::<E>))),
           )),
           opt(preceded(
-            preceded(multispace1, tag("Error")),
+            preceded(multispace1, tag_no_case("Error")),
             cut(many1(preceded(multispace1, double))),
           )),
           opt(preceded(
-            preceded(multispace1, tag("Resolution")),
+            preceded(multispace1, tag_no_case("Resolution")),
             cut(many1(preceded(multispace1, double))),
           )),
           opt(preceded(
-            preceded(multispace1, tag("PixSize")),
+            preceded(multispace1, tag_no_case("PixSize")),
             cut(many1(preceded(multispace1, double))),
           )),
         )),

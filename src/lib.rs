@@ -18,62 +18,106 @@ pub mod redshift;
 pub mod space;
 pub mod spectral;
 pub mod time;
+pub mod visitor;
 
-use self::{redshift::Redshift, space::Space, spectral::Spectral, time::Time};
+use self::{
+  redshift::Redshift,
+  space::Space,
+  spectral::Spectral,
+  time::Time,
+  visitor::{RedshiftVisitor, SpaceVisitor, SpectralVisitor, StcVisitResult, TimeVisitor},
+};
 
+/// Trait used everywhere to propagate Nom errors.
 pub trait NomErr<'a>: ParseError<&'a str> + FromExternalError<&'a str, String> {}
-
+/// Implements the `NomErr` trait to all elements implementing both `ParseError` and `FromExternalError`.
 impl<'a, T> NomErr<'a> for T where T: ParseError<&'a str> + FromExternalError<&'a str, String> {}
 
-/// STC-S phrase.
+/// Represents a STC-S phrase.
 #[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
 pub struct Stc {
   #[serde(skip_serializing_if = "Option::is_none")]
-  time: Option<Time>,
+  pub time: Option<Time>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  space: Option<Space>,
+  pub space: Option<Space>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  spectral: Option<Spectral>,
+  pub spectral: Option<Spectral>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  redshift: Option<Redshift>,
+  pub redshift: Option<Redshift>,
 }
 impl Stc {
+  /// Create a new, empty, STC-S phrase.
   pub fn new() -> Self {
     Self::default()
   }
-
-  pub fn set_time(mut self, time: Time) -> Self {
-    self.set_time_by_ref(time);
+  /// Set (or overwrite) the time sub-phrase.
+  pub fn set_time<T: Into<Time>>(mut self, elem: T) -> Self {
+    self.set_time_by_ref(elem);
     self
   }
-  pub fn set_time_by_ref(&mut self, time: Time) {
-    self.time.replace(time);
+  /// Set (or overwrite) the time sub-phrase, by reference.
+  pub fn set_time_by_ref<T: Into<Time>>(&mut self, elem: T) {
+    self.time.replace(elem.into());
   }
 
-  pub fn set_space(mut self, space: Space) -> Self {
+  /// Set (or overwrite) the space sub-phrase.
+  pub fn set_space<T: Into<Space>>(mut self, space: T) -> Self {
     self.set_space_by_ref(space);
     self
   }
-  pub fn set_space_by_ref(&mut self, space: Space) {
-    self.space.replace(space);
+  /// Set (or overwrite) the time sub-phrase, by reference.
+  pub fn set_space_by_ref<T: Into<Space>>(&mut self, space: T) {
+    self.space.replace(space.into());
   }
 
-  pub fn set_spectral(mut self, spectral: Spectral) -> Self {
+  /// Set (or overwrite) the spectral sub-phrase.
+  pub fn set_spectral<T: Into<Spectral>>(mut self, spectral: T) -> Self {
     self.set_spectral_by_ref(spectral);
     self
   }
-  pub fn set_spectral_by_ref(&mut self, spectral: Spectral) {
-    self.spectral.replace(spectral);
+  /// Set (or overwrite) the spectral sub-phrase, by reference.
+  pub fn set_spectral_by_ref<T: Into<Spectral>>(&mut self, spectral: T) {
+    self.spectral.replace(spectral.into());
   }
 
-  pub fn set_redshift(mut self, redshift: Redshift) -> Self {
+  /// Set (or overwrite) the redshift sub-phrase.
+  pub fn set_redshift<T: Into<Redshift>>(mut self, redshift: T) -> Self {
     self.set_redshift_by_ref(redshift);
     self
   }
-  pub fn set_redshift_by_ref(&mut self, redshift: Redshift) {
-    self.redshift.replace(redshift);
+  /// Set (or overwrite) the redshift sub-phrase, by reference.
+  pub fn set_redshift_by_ref<T: Into<Redshift>>(&mut self, redshift: T) {
+    self.redshift.replace(redshift.into());
   }
 
+  pub fn accept<T, S, P, R>(
+    &self,
+    time_visitor: T,
+    space_visitor: S,
+    spectral_visitor: P,
+    redshift_visitor: R,
+  ) -> StcVisitResult<T, S, P, R>
+  where
+    T: TimeVisitor,
+    S: SpaceVisitor,
+    P: SpectralVisitor,
+    R: RedshiftVisitor,
+  {
+    StcVisitResult::new(
+      self.time.as_ref().map(|time| time.accept(time_visitor)),
+      self.space.as_ref().map(|space| space.accept(space_visitor)),
+      self
+        .spectral
+        .as_ref()
+        .map(|spectral| spectral.accept(spectral_visitor)),
+      self
+        .redshift
+        .as_ref()
+        .map(|redshift| redshift.accept(redshift_visitor)),
+    )
+  }
+
+  /// Parse a complete STC-S Phrase.
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     map(
       tuple((
@@ -126,11 +170,27 @@ impl Display for Stc {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
+  use super::{
+    common::SpaceTimeRefPos,
+    space::{common::Frame, positioninterval::PositionInterval},
+    *,
+  };
   use nom::{
     error::{convert_error, VerboseError},
     Err,
   };
+
+  #[test]
+  fn test_api_1() {
+    let stc = Stc::new().set_space(
+      PositionInterval::from_frame(Frame::ICRS)
+        .set_refpos(SpaceTimeRefPos::Geocenter)
+        .set_lo_hi_limits(vec![170.0, -20.0, 190.0, 10.0])
+        .set_resolution(vec![0.0001]),
+    );
+    let s = "PositionInterval ICRS GEOCENTER 170 -20 190 10 Resolution 0.0001";
+    assert_eq!(stc.to_string().as_str(), s);
+  }
 
   #[test]
   fn test_from_stcs_doc_1() {

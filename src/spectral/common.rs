@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use nom::{
   branch::alt,
-  bytes::complete::tag,
-  character::complete::{char, multispace1},
+  bytes::complete::tag_no_case,
+  character::complete::multispace1,
   combinator::{cut, map, opt, value},
   multi::many_m_n,
   number::complete::double,
@@ -16,9 +16,9 @@ use nom::{
   IResult,
 };
 
-use crate::{NomErr, common::ValOrRange};
+use crate::{common::ValOrRange, NomErr};
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
 pub enum SpectralUnit {
   #[serde(rename = "Angstrom")]
   Angstrom,
@@ -46,18 +46,23 @@ pub enum SpectralUnit {
 impl SpectralUnit {
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     alt((
-      value(Self::Angstrom, tag("Angstrom")),
-      value(Self::GHz, tag("GHz")),
-      value(Self::MeV, tag("MeV")),
-      value(Self::MHz, tag("MHz")),
-      value(Self::KeV, tag("keV")),
-      value(Self::Hz, tag("Hz")),
-      value(Self::Nm, tag("nm")),
-      value(Self::Mm, tag("mm")),
-      value(Self::Um, tag("um")),
-      value(Self::EV, tag("eV")),
-      value(Self::M, char('m')),
+      value(Self::Angstrom, tag_no_case("Angstrom")),
+      value(Self::GHz, tag_no_case("GHz")),
+      value(Self::MeV, tag_no_case("MeV")),
+      value(Self::MHz, tag_no_case("MHz")),
+      value(Self::KeV, tag_no_case("keV")),
+      value(Self::Hz, tag_no_case("Hz")),
+      value(Self::Nm, tag_no_case("nm")),
+      value(Self::Mm, tag_no_case("mm")),
+      value(Self::Um, tag_no_case("um")),
+      value(Self::EV, tag_no_case("eV")),
+      value(Self::M, tag_no_case("m")),
     ))(input)
+  }
+}
+impl Default for SpectralUnit {
+  fn default() -> Self {
+    Self::Hz
   }
 }
 impl FromStr for SpectralUnit {
@@ -101,8 +106,8 @@ impl Display for SpectralUnit {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct UnitToPixsize {
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
+pub(crate) struct UnitToPixsize {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub unit: Option<SpectralUnit>,
   #[serde(rename = "error", skip_serializing_if = "Option::is_none")]
@@ -115,32 +120,71 @@ pub struct UnitToPixsize {
   pub pixsize: Option<ValOrRange>,
 }
 impl UnitToPixsize {
+  // Setters by ref
+
+  pub fn set_unit_by_ref(&mut self, unit: SpectralUnit) {
+    self.unit.replace(unit);
+  }
+  pub fn set_error_by_ref(&mut self, error: ValOrRange) {
+    self.error.replace(error);
+  }
+  pub fn set_resolution_by_ref(&mut self, resolution: ValOrRange) {
+    self.resolution.replace(resolution);
+  }
+  pub fn set_size_by_ref(&mut self, size: ValOrRange) {
+    self.size.replace(size);
+  }
+  pub fn set_pixsize_by_ref(&mut self, pixsize: ValOrRange) {
+    self.pixsize.replace(pixsize);
+  }
+
+  // Getters
+
+  pub fn unit(&self) -> Option<SpectralUnit> {
+    self.unit
+  }
+  pub fn unit_or_default(&self) -> SpectralUnit {
+    self.unit.unwrap_or_default()
+  }
+  pub fn error(&self) -> Option<&ValOrRange> {
+    self.error.as_ref()
+  }
+  pub fn resolution(&self) -> Option<&ValOrRange> {
+    self.resolution.as_ref()
+  }
+  pub fn size(&self) -> Option<&ValOrRange> {
+    self.size.as_ref()
+  }
+  pub fn pixsize(&self) -> Option<&ValOrRange> {
+    self.pixsize.as_ref()
+  }
+
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     map(
       tuple((
         // unit
         opt(preceded(
-          preceded(multispace1, tag("unit")),
+          preceded(multispace1, tag_no_case("unit")),
           cut(preceded(multispace1, SpectralUnit::parse::<E>)),
         )),
         // error
         opt(preceded(
-          preceded(multispace1, tag("Error")),
+          preceded(multispace1, tag_no_case("Error")),
           cut(many_m_n(1, 2, preceded(multispace1, double))),
         )),
         // resolution
         opt(preceded(
-          preceded(multispace1, tag("Resolution")),
+          preceded(multispace1, tag_no_case("Resolution")),
           cut(many_m_n(1, 2, preceded(multispace1, double))),
         )),
         // size
         opt(preceded(
-          preceded(multispace1, tag("Size")),
+          preceded(multispace1, tag_no_case("Size")),
           cut(many_m_n(1, 2, preceded(multispace1, double))),
         )),
         // pixsize
         opt(preceded(
-          preceded(multispace1, tag("PixSize")),
+          preceded(multispace1, tag_no_case("PixSize")),
           cut(many_m_n(1, 2, preceded(multispace1, double))),
         )),
       )),

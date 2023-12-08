@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use nom::{branch::alt, bytes::complete::tag, combinator::value, IResult};
+use nom::{branch::alt, bytes::complete::tag_no_case, combinator::value, IResult};
 
 use super::NomErr;
 
@@ -42,7 +42,7 @@ impl From<Vec<f64>> for ValOrRange {
 }
 
 /// The default value is `UNKNOWNRefPos`
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
 pub enum SpaceTimeRefPos {
   #[serde(rename = "GEOCENTER")]
   Geocenter,
@@ -77,25 +77,30 @@ pub enum SpaceTimeRefPos {
   #[serde(rename = "UNKNOWNRefPos")]
   UnknownRefPos,
 }
+impl Default for SpaceTimeRefPos {
+  fn default() -> Self {
+    Self::UnknownRefPos
+  }
+}
 impl SpaceTimeRefPos {
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     alt((
-      value(Self::Geocenter, tag("GEOCENTER")),
-      value(Self::Barycenter, tag("BARYCENTER")),
-      value(Self::Heliocenter, tag("HELIOCENTER")),
-      value(Self::Topocenter, tag("TOPOCENTER")),
-      value(Self::GalacticCenter, tag("GALACTIC_CENTER")),
-      value(Self::Embarycenter, tag("EMBARYCENTER")),
-      value(Self::Moon, tag("MOON")),
-      value(Self::Mercury, tag("MERCURY")),
-      value(Self::Venus, tag("VENUS")),
-      value(Self::Mars, tag("MARS")),
-      value(Self::Jupiter, tag("JUPITER")),
-      value(Self::Saturn, tag("SATURN")),
-      value(Self::Uranus, tag("URANUS")),
-      value(Self::Neptune, tag("NEPTUNE")),
-      value(Self::Pluto, tag("PLUTO")),
-      value(Self::UnknownRefPos, tag("UNKNOWNRefPos")),
+      value(Self::Geocenter, tag_no_case("GEOCENTER")),
+      value(Self::Barycenter, tag_no_case("BARYCENTER")),
+      value(Self::Heliocenter, tag_no_case("HELIOCENTER")),
+      value(Self::Topocenter, tag_no_case("TOPOCENTER")),
+      value(Self::GalacticCenter, tag_no_case("GALACTIC_CENTER")),
+      value(Self::Embarycenter, tag_no_case("EMBARYCENTER")),
+      value(Self::Moon, tag_no_case("MOON")),
+      value(Self::Mercury, tag_no_case("MERCURY")),
+      value(Self::Venus, tag_no_case("VENUS")),
+      value(Self::Mars, tag_no_case("MARS")),
+      value(Self::Jupiter, tag_no_case("JUPITER")),
+      value(Self::Saturn, tag_no_case("SATURN")),
+      value(Self::Uranus, tag_no_case("URANUS")),
+      value(Self::Neptune, tag_no_case("NEPTUNE")),
+      value(Self::Pluto, tag_no_case("PLUTO")),
+      value(Self::UnknownRefPos, tag_no_case("UNKNOWNRefPos")),
     ))(input)
   }
 }
@@ -194,28 +199,33 @@ pub enum SpectralRedshiftRefPos {
   #[serde(rename = "UNKNOWNRefPos")]
   UnknownRefPos,
 }
+impl Default for SpectralRedshiftRefPos {
+  fn default() -> Self {
+    Self::UnknownRefPos
+  }
+}
 impl SpectralRedshiftRefPos {
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     alt((
-      value(Self::Geocenter, tag("GEOCENTER")),
-      value(Self::Barycenter, tag("BARYCENTER")),
-      value(Self::Heliocenter, tag("HELIOCENTER")),
-      value(Self::Topocenter, tag("TOPOCENTER")),
-      value(Self::LsrK, tag("LSR[K]")),
-      value(Self::Lsrd, tag("LSRD")),
-      value(Self::GalacticCenter, tag("GALACTIC_CENTER")),
-      value(Self::LocalGroupCenter, tag("LOCAL_GROUP_CENTER")),
-      value(Self::Embarycenter, tag("EMBARYCENTER")),
-      value(Self::Moon, tag("MOON")),
-      value(Self::Mercury, tag("MERCURY")),
-      value(Self::Venus, tag("VENUS")),
-      value(Self::Mars, tag("MARS")),
-      value(Self::Jupiter, tag("JUPITER")),
-      value(Self::Saturn, tag("SATURN")),
-      value(Self::Uranus, tag("URANUS")),
-      value(Self::Neptune, tag("NEPTUNE")),
-      value(Self::Pluto, tag("PLUTO")),
-      value(Self::UnknownRefPos, tag("UNKNOWNRefPos")),
+      value(Self::Geocenter, tag_no_case("GEOCENTER")),
+      value(Self::Barycenter, tag_no_case("BARYCENTER")),
+      value(Self::Heliocenter, tag_no_case("HELIOCENTER")),
+      value(Self::Topocenter, tag_no_case("TOPOCENTER")),
+      value(Self::LsrK, tag_no_case("LSR[K]")),
+      value(Self::Lsrd, tag_no_case("LSRD")),
+      value(Self::GalacticCenter, tag_no_case("GALACTIC_CENTER")),
+      value(Self::LocalGroupCenter, tag_no_case("LOCAL_GROUP_CENTER")),
+      value(Self::Embarycenter, tag_no_case("EMBARYCENTER")),
+      value(Self::Moon, tag_no_case("MOON")),
+      value(Self::Mercury, tag_no_case("MERCURY")),
+      value(Self::Venus, tag_no_case("VENUS")),
+      value(Self::Mars, tag_no_case("MARS")),
+      value(Self::Jupiter, tag_no_case("JUPITER")),
+      value(Self::Saturn, tag_no_case("SATURN")),
+      value(Self::Uranus, tag_no_case("URANUS")),
+      value(Self::Neptune, tag_no_case("NEPTUNE")),
+      value(Self::Pluto, tag_no_case("PLUTO")),
+      value(Self::UnknownRefPos, tag_no_case("UNKNOWNRefPos")),
     ))(input)
   }
 }

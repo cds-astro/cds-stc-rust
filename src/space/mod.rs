@@ -4,7 +4,7 @@ use nom::{branch::alt, combinator::map, IResult};
 
 use serde::{Deserialize, Serialize};
 
-use crate::NomErr;
+use crate::{visitor::SpaceVisitor, NomErr};
 
 pub mod common;
 pub mod expression;
@@ -12,7 +12,13 @@ pub mod geometry;
 pub mod position;
 pub mod positioninterval;
 use self::{
-  expression::ExpressionEnum, geometry::GeometryEnum, position::Position,
+  common::{
+    expression::{DifferenceArgs, IntersectionArgs, NotArgs, UnionArgs},
+    region::{AllSkyParams, BoxParams, CircleParams, ConvexParams, EllipseParams, PolygonParams},
+  },
+  expression::{Expression, ExpressionEnum},
+  geometry::{Geometry, GeometryEnum},
+  position::Position,
   positioninterval::PositionInterval,
 };
 
@@ -30,6 +36,14 @@ pub enum Space {
   Expression(ExpressionEnum),
 }
 impl Space {
+  pub fn accept<V: SpaceVisitor>(&self, visitor: V) -> Result<V::Value, V::Error> {
+    match self {
+      Self::Position(e) => visitor.visit_position_simple(e),
+      Self::PositionInterval(e) => visitor.visit_position_interval(e),
+      Self::Geometry(e) => e.accept(visitor),
+      Self::Expression(e) => e.accept(visitor),
+    }
+  }
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     alt((
       map(PositionInterval::parse::<E>, Self::PositionInterval),
@@ -47,6 +61,80 @@ impl Display for Space {
       Self::Geometry(e) => Display::fmt(e, f),
       Self::Expression(e) => Display::fmt(e, f),
     }
+  }
+}
+
+impl From<PositionInterval> for Space {
+  fn from(value: PositionInterval) -> Self {
+    Self::PositionInterval(value)
+  }
+}
+
+impl From<Position> for Space {
+  fn from(value: Position) -> Self {
+    Self::Position(value)
+  }
+}
+
+impl From<GeometryEnum> for Space {
+  fn from(value: GeometryEnum) -> Self {
+    Self::Geometry(value)
+  }
+}
+impl From<Geometry<AllSkyParams>> for Space {
+  fn from(value: Geometry<AllSkyParams>) -> Self {
+    Self::Geometry(value.into())
+  }
+}
+impl From<Geometry<CircleParams>> for Space {
+  fn from(value: Geometry<CircleParams>) -> Self {
+    Self::Geometry(value.into())
+  }
+}
+impl From<Geometry<EllipseParams>> for Space {
+  fn from(value: Geometry<EllipseParams>) -> Self {
+    Self::Geometry(value.into())
+  }
+}
+impl From<Geometry<BoxParams>> for Space {
+  fn from(value: Geometry<BoxParams>) -> Self {
+    Self::Geometry(value.into())
+  }
+}
+impl From<Geometry<PolygonParams>> for Space {
+  fn from(value: Geometry<PolygonParams>) -> Self {
+    Self::Geometry(value.into())
+  }
+}
+impl From<Geometry<ConvexParams>> for Space {
+  fn from(value: Geometry<ConvexParams>) -> Self {
+    Self::Geometry(value.into())
+  }
+}
+
+impl From<ExpressionEnum> for Space {
+  fn from(value: ExpressionEnum) -> Self {
+    Self::Expression(value)
+  }
+}
+impl From<Expression<NotArgs>> for Space {
+  fn from(value: Expression<NotArgs>) -> Self {
+    Self::Expression(value.into())
+  }
+}
+impl From<Expression<UnionArgs>> for Space {
+  fn from(value: Expression<UnionArgs>) -> Self {
+    Self::Expression(value.into())
+  }
+}
+impl From<Expression<IntersectionArgs>> for Space {
+  fn from(value: Expression<IntersectionArgs>) -> Self {
+    Self::Expression(value.into())
+  }
+}
+impl From<Expression<DifferenceArgs>> for Space {
+  fn from(value: Expression<DifferenceArgs>) -> Self {
+    Self::Expression(value.into())
   }
 }
 

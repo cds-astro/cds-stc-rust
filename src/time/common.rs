@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use nom::{
   branch::alt,
-  bytes::complete::{tag, take},
+  bytes::complete::{tag_no_case, take},
   character::complete::{char, digit0, multispace1},
   combinator::{cut, map, map_res, opt, value},
   multi::many_m_n,
@@ -16,10 +16,13 @@ use nom::{
   IResult,
 };
 
-use crate::{common::{SpaceTimeRefPos as RefPos, ValOrRange}, NomErr};
+use crate::{
+  common::{SpaceTimeRefPos as RefPos, ValOrRange},
+  NomErr,
+};
 
 /// The default value is nil.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Copy, Debug, Clone, PartialEq)]
 pub enum TimeScale {
   #[serde(rename = "TT")]
   TT,
@@ -46,21 +49,26 @@ pub enum TimeScale {
   #[serde(rename = "nil")]
   Nil,
 }
+impl Default for TimeScale {
+  fn default() -> Self {
+    Self::Nil
+  }
+}
 impl TimeScale {
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     alt((
-      value(Self::TT, tag("TT")),
-      value(Self::TDB, tag("TDT")),
-      value(Self::ET, tag("ET")),
-      value(Self::TAI, tag("TAI")),
-      value(Self::IAT, tag("IAT")),
-      value(Self::UTC, tag("UTC")),
-      value(Self::TEB, tag("TEB")),
-      value(Self::TDB, tag("TDB")),
-      value(Self::TCG, tag("TCG")),
-      value(Self::TCB, tag("TCB")),
-      value(Self::LST, tag("LST")),
-      value(Self::Nil, tag("nil")),
+      value(Self::TT, tag_no_case("TT")),
+      value(Self::TDB, tag_no_case("TDT")),
+      value(Self::ET, tag_no_case("ET")),
+      value(Self::TAI, tag_no_case("TAI")),
+      value(Self::IAT, tag_no_case("IAT")),
+      value(Self::UTC, tag_no_case("UTC")),
+      value(Self::TEB, tag_no_case("TEB")),
+      value(Self::TDB, tag_no_case("TDB")),
+      value(Self::TCG, tag_no_case("TCG")),
+      value(Self::TCB, tag_no_case("TCB")),
+      value(Self::LST, tag_no_case("LST")),
+      value(Self::Nil, tag_no_case("nil")),
     ))(input)
   }
 }
@@ -108,7 +116,7 @@ impl Display for TimeScale {
 }
 
 /// The default value is `s`;
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Copy, Debug, Clone, PartialEq)]
 pub enum TimeUnit {
   #[serde(rename = "s")]
   S,
@@ -121,14 +129,19 @@ pub enum TimeUnit {
   #[serde(rename = "cy")]
   Cy,
 }
+impl Default for TimeUnit {
+  fn default() -> Self {
+    Self::S
+  }
+}
 impl TimeUnit {
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     alt((
-      value(Self::S, tag("s")),
-      value(Self::D, tag("d")),
-      value(Self::A, tag("a")),
-      value(Self::Yr, tag("yr")),
-      value(Self::Cy, tag("cy")),
+      value(Self::S, tag_no_case("s")),
+      value(Self::D, tag_no_case("d")),
+      value(Self::A, tag_no_case("a")),
+      value(Self::Yr, tag_no_case("yr")),
+      value(Self::Cy, tag_no_case("cy")),
     ))(input)
   }
 }
@@ -162,7 +175,7 @@ impl Display for TimeUnit {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct TimescaleRefpos {
+pub(crate) struct TimescaleRefpos {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub timescale: Option<TimeScale>,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -179,35 +192,34 @@ impl Display for TimescaleRefpos {
     Ok(())
   }
 }
+impl Default for TimescaleRefpos {
+  fn default() -> Self {
+    Self::from_args(None, None)
+  }
+}
 impl TimescaleRefpos {
-  pub fn new(timescale: Option<TimeScale>, refpos: Option<RefPos>) -> Self {
+  pub fn from_args(timescale: Option<TimeScale>, refpos: Option<RefPos>) -> Self {
     Self { timescale, refpos }
-  }
-  pub fn new_empty() -> Self {
-    Self::new(None, None)
-  }
-
-  pub fn set_timescale(mut self, timescale: TimeScale) -> Self {
-    self.set_timescale_by_ref(timescale);
-    self
-  }
-  pub fn set_refpos(mut self, refpos: RefPos) -> Self {
-    self.set_refpos_by_ref(refpos);
-    self
   }
 
   pub fn set_timescale_by_ref(&mut self, timescale: TimeScale) {
-    self.timescale = Some(timescale);
+    self.timescale.replace(timescale);
   }
   pub fn set_refpos_by_ref(&mut self, refpos: RefPos) {
-    self.refpos = Some(refpos);
+    self.refpos.replace(refpos);
   }
 
-  pub fn timescale(&self) -> Option<&TimeScale> {
-    self.timescale.as_ref()
+  pub fn timescale(&self) -> Option<TimeScale> {
+    self.timescale
   }
-  pub fn refpos(&self) -> Option<&RefPos> {
-    self.refpos.as_ref()
+  pub fn timescale_or_default(&self) -> TimeScale {
+    self.timescale.unwrap_or_default()
+  }
+  pub fn refpos(&self) -> Option<RefPos> {
+    self.refpos
+  }
+  pub fn refpos_or_default(&self) -> RefPos {
+    self.refpos.unwrap_or_default()
   }
 
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
@@ -222,7 +234,7 @@ impl TimescaleRefpos {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct FillfactorTimescaleRefpos {
+pub(crate) struct FillfactorTimescaleRefpos {
   #[serde(skip_serializing_if = "Option::is_none")]
   /// Default value =1.0.
   pub fillfactor: Option<f64>,
@@ -237,35 +249,25 @@ impl Display for FillfactorTimescaleRefpos {
     self.timescale_refpos.fmt(f)
   }
 }
+impl Default for FillfactorTimescaleRefpos {
+  fn default() -> Self {
+    Self::from_args(None, None, None)
+  }
+}
 impl FillfactorTimescaleRefpos {
-  pub fn new(
+  pub fn from_args(
     fillfactor: Option<f64>,
     timescale: Option<TimeScale>,
     refpos: Option<RefPos>,
   ) -> Self {
     Self {
       fillfactor,
-      timescale_refpos: TimescaleRefpos::new(timescale, refpos),
+      timescale_refpos: TimescaleRefpos::from_args(timescale, refpos),
     }
-  }
-  pub fn new_empty() -> Self {
-    Self::new(None, None, None)
-  }
-  pub fn set_fillfactor(mut self, fillfactor: f64) -> Self {
-    self.set_fillfactor_by_ref(fillfactor);
-    self
-  }
-  pub fn set_timescale(mut self, timescale: TimeScale) -> Self {
-    self.set_timescale_by_ref(timescale);
-    self
-  }
-  pub fn set_refpos(mut self, refpos: RefPos) -> Self {
-    self.set_refpos_by_ref(refpos);
-    self
   }
 
   pub fn set_fillfactor_by_ref(&mut self, fillfactor: f64) {
-    self.fillfactor = Some(fillfactor);
+    self.fillfactor.replace(fillfactor);
   }
   pub fn set_timescale_by_ref(&mut self, timescale: TimeScale) {
     self.timescale_refpos.set_timescale_by_ref(timescale);
@@ -277,11 +279,20 @@ impl FillfactorTimescaleRefpos {
   pub fn fillfactor(&self) -> Option<f64> {
     self.fillfactor
   }
-  pub fn timescale(&self) -> Option<&TimeScale> {
+  pub fn fillfactor_or_default(&self) -> f64 {
+    self.fillfactor().unwrap_or(1.0)
+  }
+  pub fn timescale(&self) -> Option<TimeScale> {
     self.timescale_refpos.timescale()
   }
-  pub fn refpos(&self) -> Option<&RefPos> {
+  pub fn timescale_or_default(&self) -> TimeScale {
+    self.timescale_refpos.timescale_or_default()
+  }
+  pub fn refpos(&self) -> Option<RefPos> {
     self.timescale_refpos.refpos()
+  }
+  pub fn refpos_or_default(&self) -> RefPos {
+    self.timescale_refpos.refpos_or_default()
   }
 
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
@@ -289,7 +300,7 @@ impl FillfactorTimescaleRefpos {
       tuple((
         // fillfactor
         opt(preceded(
-          delimited(multispace1, tag("fillfactor"), multispace1),
+          delimited(multispace1, tag_no_case("fillfactor"), multispace1),
           cut(double),
         )),
         // frame
@@ -325,11 +336,17 @@ impl DateTime {
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     alt((
       map(
-        preceded(tag("JD"), cut(preceded(multispace1, HighPrecDay::parse))),
+        preceded(
+          tag_no_case("JD"),
+          cut(preceded(multispace1, HighPrecDay::parse)),
+        ),
         Self::JD,
       ),
       map(
-        preceded(tag("MJD"), cut(preceded(multispace1, HighPrecDay::parse))),
+        preceded(
+          tag_no_case("MJD"),
+          cut(preceded(multispace1, HighPrecDay::parse)),
+        ),
         Self::MJD,
       ),
       map(Iso::parse, Self::Iso),
@@ -618,8 +635,8 @@ impl HighPrecDay {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct FromUnitToPixSize {
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
+pub(crate) struct FromUnitToPixSize {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub unit: Option<TimeUnit>,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -632,32 +649,71 @@ pub struct FromUnitToPixSize {
   pub pixsize: Option<ValOrRange>,
 }
 impl FromUnitToPixSize {
+  // Setters by ref
+
+  pub fn set_unit_by_ref(&mut self, unit: TimeUnit) {
+    self.unit.replace(unit);
+  }
+  pub fn set_error_by_ref(&mut self, error: ValOrRange) {
+    self.error.replace(error);
+  }
+  pub fn set_resolution_by_ref(&mut self, resolution: ValOrRange) {
+    self.resolution.replace(resolution);
+  }
+  pub fn set_size_by_ref(&mut self, size: ValOrRange) {
+    self.size.replace(size);
+  }
+  pub fn set_pixsize_by_ref(&mut self, pixsize: ValOrRange) {
+    self.pixsize.replace(pixsize);
+  }
+
+  // Getters
+
+  pub fn unit(&self) -> Option<TimeUnit> {
+    self.unit
+  }
+  pub fn unit_or_default(&self) -> TimeUnit {
+    self.unit.unwrap_or_default()
+  }
+  pub fn error(&self) -> Option<&ValOrRange> {
+    self.error.as_ref()
+  }
+  pub fn resolution(&self) -> Option<&ValOrRange> {
+    self.resolution.as_ref()
+  }
+  pub fn size(&self) -> Option<&ValOrRange> {
+    self.size.as_ref()
+  }
+  pub fn pixsize(&self) -> Option<&ValOrRange> {
+    self.pixsize.as_ref()
+  }
+
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     map(
       tuple((
         // unit
         opt(preceded(
-          preceded(multispace1, tag("unit")),
+          preceded(multispace1, tag_no_case("unit")),
           TimeUnit::parse::<E>,
         )),
         // error
         opt(preceded(
-          preceded(multispace1, tag("Error")),
+          preceded(multispace1, tag_no_case("Error")),
           cut(many_m_n(1, 2, preceded(multispace1, double))),
         )),
         // resolution
         opt(preceded(
-          preceded(multispace1, tag("Resolution")),
+          preceded(multispace1, tag_no_case("Resolution")),
           cut(many_m_n(1, 2, preceded(multispace1, double))),
         )),
         // size
         opt(preceded(
-          preceded(multispace1, tag("Size")),
+          preceded(multispace1, tag_no_case("Size")),
           cut(many_m_n(1, 2, preceded(multispace1, double))),
         )),
         // pixsize
         opt(preceded(
-          preceded(multispace1, tag("PixSize")),
+          preceded(multispace1, tag_no_case("PixSize")),
           cut(many_m_n(1, 2, preceded(multispace1, double))),
         )),
       )),
@@ -692,19 +748,60 @@ impl Display for FromUnitToPixSize {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct FromTimeToPixSize {
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
+pub(crate) struct FromTimeToPixSize {
   #[serde(skip_serializing_if = "Option::is_none")]
   time: Option<DateTime>,
   #[serde(flatten)]
   from_unit_to_pixsize: FromUnitToPixSize,
 }
 impl FromTimeToPixSize {
+  pub fn set_time_by_ref(&mut self, time: DateTime) {
+    self.time.replace(time);
+  }
+  pub fn set_unit_by_ref(&mut self, unit: TimeUnit) {
+    self.from_unit_to_pixsize.set_unit_by_ref(unit)
+  }
+  pub fn set_error_by_ref(&mut self, error: ValOrRange) {
+    self.from_unit_to_pixsize.set_error_by_ref(error)
+  }
+  pub fn set_resolution_by_ref(&mut self, resolution: ValOrRange) {
+    self.from_unit_to_pixsize.set_resolution_by_ref(resolution)
+  }
+  pub fn set_size_by_ref(&mut self, size: ValOrRange) {
+    self.from_unit_to_pixsize.set_size_by_ref(size)
+  }
+  pub fn set_pixsize_by_ref(&mut self, pixsize: ValOrRange) {
+    self.from_unit_to_pixsize.set_pixsize_by_ref(pixsize)
+  }
+
+  pub fn time(&self) -> Option<&DateTime> {
+    self.time.as_ref()
+  }
+  pub fn unit(&self) -> Option<TimeUnit> {
+    self.from_unit_to_pixsize.unit()
+  }
+  pub fn unit_or_default(&self) -> TimeUnit {
+    self.from_unit_to_pixsize.unit_or_default()
+  }
+  pub fn error(&self) -> Option<&ValOrRange> {
+    self.from_unit_to_pixsize.error()
+  }
+  pub fn resolution(&self) -> Option<&ValOrRange> {
+    self.from_unit_to_pixsize.resolution()
+  }
+  pub fn size(&self) -> Option<&ValOrRange> {
+    self.from_unit_to_pixsize.size()
+  }
+  pub fn pixsize(&self) -> Option<&ValOrRange> {
+    self.from_unit_to_pixsize.pixsize()
+  }
+
   pub fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     map(
       tuple((
         opt(preceded(
-          preceded(multispace1, tag("Time")),
+          preceded(multispace1, tag_no_case("Time")),
           cut(preceded(multispace1, DateTime::parse)),
         )),
         FromUnitToPixSize::parse,

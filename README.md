@@ -34,6 +34,27 @@ We are (reasonably) open to changes and we appreciate feedbacks.
 Please, provide us with more STC-S examples!
 
 
+## STC-S String from API example
+
+```rust
+Stc::new().set_space(
+  PositionInterval::from_frame(Frame::ICRS)
+    .set_refpos(SpaceTimeRefPos::Geocenter)
+    .set_lo_hi_limits(vec![170.0, -20.0, 190.0, 10.0])
+    .set_resolution(vec![0.0001])
+).to_string();
+```
+gives the string:
+```txt
+"PositionInterval ICRS GEOCENTER 170 -20 190 10 Resolution 0.0001"
+```
+You can parse the string back to an object using (`unwrap` must be avoided, see tests in `lib.rs` 
+for a complete example):
+```rust
+let ascii = "PositionInterval ICRS GEOCENTER 170 -20 190 10 Resolution 0.0001";
+let stc = Stc::parse::<VerboseError<&str>>(ascii).unwrap().1;
+```
+
 ## STC-S to JSON conversion examples
 
 The following examples are extracted from the internal tests.
@@ -287,8 +308,10 @@ is converted into:
 * [X] Support parsing of STC-S as defined in TAP.
 * [ ] Make a CLI.
 * [ ] Make a JS/Wasm library.
-* [ ] Add everywhere builders, getters and setters like in the `FillFrameRefposFlavor` structure to make a clean API.
-* [ ] Create a visitor.
+* [X] Add everywhere builders, getters and setters like in the `FillFrameRefposFlavor` structure to make a clean API.
+* [X] Create a visitor.
+    + [X] implement an 'empty' visitor
+    + [ ] implement an 'echo' visitor
 * [ ] Implement `fold` to avoid too wide lines.
 * [ ] Support for STC XML serialization/deserialization?
 
