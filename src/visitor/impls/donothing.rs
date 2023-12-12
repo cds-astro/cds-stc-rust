@@ -1,11 +1,13 @@
-use std::error::Error;
-use std::fmt::{Display, Formatter};
+use std::{
+  error::Error,
+  fmt::{Display, Formatter},
+};
 
 use crate::{
   redshift::{RedshiftInterval, RedshiftValue},
   space::{
     common::{
-      region::{AllSkyParams, BoxParams, CircleParams, ConvexParams, EllipseParams, PolygonParams},
+      region::{BoxParams, CircleParams, ConvexParams, EllipseParams, PolygonParams},
       FillFrameRefposFlavor, FromPosToVelocity,
     },
     position::Position,
@@ -94,14 +96,7 @@ impl CompoundVisitor for VoidVisitor {
   type Value = ();
   type Error = VoidError;
 
-  fn new_from_params(
-    _fill_fram_refpos_flavor: &FillFrameRefposFlavor,
-    _from_pos_to_velocity: &FromPosToVelocity,
-  ) -> Result<Self, Self::Error> {
-    Ok(Self)
-  }
-
-  fn visit_allsky(&mut self, _allsky: &AllSkyParams) -> Result<Self::Value, Self::Error> {
+  fn visit_allsky(&mut self) -> Result<Self::Value, Self::Error> {
     Ok(())
   }
 
@@ -156,6 +151,14 @@ impl SpaceVisitor for VoidVisitor {
   type Value = ();
   type Error = VoidError;
   type C = Self;
+
+  fn new_compound_visitor(
+    &self,
+    _fill_fram_refpos_flavor: &FillFrameRefposFlavor,
+    _from_pos_to_velocity: &FromPosToVelocity,
+  ) -> Result<Self, Self::Error> {
+    Ok(Self)
+  }
 
   fn visit_position_simple(self, _position: &Position) -> Result<Self::Value, Self::Error> {
     Ok(())

@@ -238,8 +238,12 @@ impl<T: RegionParams> Geometry<T> {
     self.post.pixsize()
   }
 
-  fn accept_gen<V: SpaceVisitor>(&self) -> Result<V::Value, V::Error> {
-    V::C::new_from_params(&self.pre, &self.post)
+  fn accept_gen<V: SpaceVisitor>(
+    &self,
+    visitor: &mut V,
+  ) -> Result<<V::C as CompoundVisitor>::Value, V::Error> {
+    visitor
+      .new_compound_visitor(&self.pre, &self.post)
       .and_then(|mut visitor| self.params.accept(&mut visitor))
   }
 
@@ -273,9 +277,9 @@ impl Geometry<AllSkyParams> {
   pub fn flavor_or_default(&self) -> Flavor {
     self.pre.flavor().unwrap_or(Flavor::Spher2)
   }
-  pub fn accept<V: SpaceVisitor>(&self, visitor: V) -> Result<V::Value, V::Error> {
+  pub fn accept<V: SpaceVisitor>(&self, mut visitor: V) -> Result<V::Value, V::Error> {
     self
-      .accept_gen::<V>()
+      .accept_gen(&mut visitor)
       .and_then(|res| visitor.visit_allsky(res))
   }
 }
@@ -292,9 +296,9 @@ impl Geometry<CircleParams> {
   pub fn flavor_or_default(&self) -> Flavor {
     self.pre.flavor().unwrap_or(Flavor::Spher2)
   }
-  pub fn accept<V: SpaceVisitor>(&self, visitor: V) -> Result<V::Value, V::Error> {
+  pub fn accept<V: SpaceVisitor>(&self, mut visitor: V) -> Result<V::Value, V::Error> {
     self
-      .accept_gen::<V>()
+      .accept_gen(&mut visitor)
       .and_then(|res| visitor.visit_circle(res))
   }
 }
@@ -326,9 +330,9 @@ impl Geometry<EllipseParams> {
   pub fn flavor_or_default(&self) -> Flavor {
     self.pre.flavor().unwrap_or(Flavor::Spher2)
   }
-  pub fn accept<V: SpaceVisitor>(&self, visitor: V) -> Result<V::Value, V::Error> {
+  pub fn accept<V: SpaceVisitor>(&self, mut visitor: V) -> Result<V::Value, V::Error> {
     self
-      .accept_gen::<V>()
+      .accept_gen(&mut visitor)
       .and_then(|res| visitor.visit_ellipse(res))
   }
 }
@@ -346,9 +350,9 @@ impl Geometry<BoxParams> {
   pub fn flavor_or_default(&self) -> Flavor {
     self.pre.flavor().unwrap_or(Flavor::Spher2)
   }
-  pub fn accept<V: SpaceVisitor>(&self, visitor: V) -> Result<V::Value, V::Error> {
+  pub fn accept<V: SpaceVisitor>(&self, mut visitor: V) -> Result<V::Value, V::Error> {
     self
-      .accept_gen::<V>()
+      .accept_gen(&mut visitor)
       .and_then(|res| visitor.visit_box(res))
   }
 }
@@ -363,9 +367,9 @@ impl Geometry<PolygonParams> {
   pub fn flavor_or_default(&self) -> Flavor {
     self.pre.flavor().unwrap_or(Flavor::Spher2)
   }
-  pub fn accept<V: SpaceVisitor>(&self, visitor: V) -> Result<V::Value, V::Error> {
+  pub fn accept<V: SpaceVisitor>(&self, mut visitor: V) -> Result<V::Value, V::Error> {
     self
-      .accept_gen::<V>()
+      .accept_gen(&mut visitor)
       .and_then(|res| visitor.visit_polygon(res))
   }
 }
@@ -380,9 +384,9 @@ impl Geometry<ConvexParams> {
   pub fn flavor_or_default(&self) -> Flavor {
     self.pre.flavor().unwrap_or(Flavor::UnitSpher)
   }
-  pub fn accept<V: SpaceVisitor>(&self, visitor: V) -> Result<V::Value, V::Error> {
+  pub fn accept<V: SpaceVisitor>(&self, mut visitor: V) -> Result<V::Value, V::Error> {
     self
-      .accept_gen::<V>()
+      .accept_gen(&mut visitor)
       .and_then(|res| visitor.visit_convex(res))
   }
 }

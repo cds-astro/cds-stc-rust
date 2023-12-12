@@ -4,7 +4,7 @@ use crate::{
   redshift::{RedshiftInterval, RedshiftValue},
   space::{
     common::{
-      region::{AllSkyParams, BoxParams, CircleParams, ConvexParams, EllipseParams, PolygonParams},
+      region::{BoxParams, CircleParams, ConvexParams, EllipseParams, PolygonParams},
       FillFrameRefposFlavor, FromPosToVelocity,
     },
     position::Position,
@@ -91,12 +91,7 @@ pub trait CompoundVisitor: Sized {
   /// Type of the returned error.
   type Error: Error;
 
-  fn new_from_params(
-    fill_fram_refpos_flavor: &FillFrameRefposFlavor,
-    from_pos_to_velocity: &FromPosToVelocity,
-  ) -> Result<Self, Self::Error>;
-
-  fn visit_allsky(&mut self, allsky: &AllSkyParams) -> Result<Self::Value, Self::Error>;
+  fn visit_allsky(&mut self) -> Result<Self::Value, Self::Error>;
   fn visit_circle(&mut self, circle: &CircleParams) -> Result<Self::Value, Self::Error>;
   fn visit_ellipse(&mut self, ellipse: &EllipseParams) -> Result<Self::Value, Self::Error>;
   fn visit_box(&mut self, skybox: &BoxParams) -> Result<Self::Value, Self::Error>;
@@ -123,7 +118,71 @@ pub trait CompoundVisitor: Sized {
 pub trait SpaceVisitor: Sized {
   type Value;
   type Error: Error;
+  type C: CompoundVisitor<Error = Self::Error>;
+
+  fn new_compound_visitor(
+    &self,
+    fill_fram_refpos_flavor: &FillFrameRefposFlavor,
+    from_pos_to_velocity: &FromPosToVelocity,
+  ) -> Result<Self::C, Self::Error>;
+
+  fn visit_position_simple(self, position: &Position) -> Result<Self::Value, Self::Error>;
+  fn visit_position_interval(self, interval: &PositionInterval)
+    -> Result<Self::Value, Self::Error>;
+
+  fn visit_allsky(
+    self,
+    content_visit_result: <Self::C as CompoundVisitor>::Value,
+  ) -> Result<Self::Value, Self::Error>;
+  fn visit_circle(
+    self,
+    content_visit_result: <Self::C as CompoundVisitor>::Value,
+  ) -> Result<Self::Value, Self::Error>;
+  fn visit_ellipse(
+    self,
+    content_visit_result: <Self::C as CompoundVisitor>::Value,
+  ) -> Result<Self::Value, Self::Error>;
+  fn visit_box(
+    self,
+    content_visit_result: <Self::C as CompoundVisitor>::Value,
+  ) -> Result<Self::Value, Self::Error>;
+  fn visit_polygon(
+    self,
+    content_visit_result: <Self::C as CompoundVisitor>::Value,
+  ) -> Result<Self::Value, Self::Error>;
+  fn visit_convex(
+    self,
+    content_visit_result: <Self::C as CompoundVisitor>::Value,
+  ) -> Result<Self::Value, Self::Error>;
+
+  fn visit_not(
+    self,
+    content_visit_result: <Self::C as CompoundVisitor>::Value,
+  ) -> Result<Self::Value, Self::Error>;
+  fn visit_union(
+    self,
+    content_visit_result: <Self::C as CompoundVisitor>::Value,
+  ) -> Result<Self::Value, Self::Error>;
+  fn visit_intersection(
+    self,
+    content_visit_result: <Self::C as CompoundVisitor>::Value,
+  ) -> Result<Self::Value, Self::Error>;
+  fn visit_difference(
+    self,
+    content_visit_result: <Self::C as CompoundVisitor>::Value,
+  ) -> Result<Self::Value, Self::Error>;
+}
+
+/*pub trait SpaceVisitor: Sized {
+  type Value;
+  type Error: Error;
   type C: CompoundVisitor<Value = Self::Value, Error = Self::Error>;
+
+  fn new_compound_visitor(
+    &self,
+    fill_fram_refpos_flavor: &FillFrameRefposFlavor,
+    from_pos_to_velocity: &FromPosToVelocity,
+  ) -> Result<Self::C, Self::Error>;
 
   fn visit_position_simple(self, position: &Position) -> Result<Self::Value, Self::Error>;
   fn visit_position_interval(self, interval: &PositionInterval)
@@ -143,7 +202,7 @@ pub trait SpaceVisitor: Sized {
     content_visit_result: Self::Value,
   ) -> Result<Self::Value, Self::Error>;
   fn visit_difference(self, content_visit_result: Self::Value) -> Result<Self::Value, Self::Error>;
-}
+}*/
 
 /// When visiting a single `Stc` structure, at most one of the two methods is called.
 pub trait RedshiftVisitor: Sized {

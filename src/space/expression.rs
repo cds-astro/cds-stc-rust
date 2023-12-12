@@ -220,8 +220,12 @@ impl<T: ExprArgs> Expression<T> {
     self.post.pixsize()
   }
 
-  fn accept_gen<V: SpaceVisitor>(&self) -> Result<V::Value, V::Error> {
-    V::C::new_from_params(&self.pre, &self.post)
+  fn accept_gen<V: SpaceVisitor>(
+    &self,
+    visitor: &mut V,
+  ) -> Result<<V::C as CompoundVisitor>::Value, V::Error> {
+    visitor
+      .new_compound_visitor(&self.pre, &self.post)
       .and_then(|mut visitor| self.args.accept(&mut visitor))
   }
 
@@ -258,9 +262,9 @@ impl Expression<NotArgs> {
   pub fn elem(&self) -> &RegionOrExpr {
     self.args.elem()
   }
-  pub fn accept<V: SpaceVisitor>(&self, visitor: V) -> Result<V::Value, V::Error> {
+  pub fn accept<V: SpaceVisitor>(&self, mut visitor: V) -> Result<V::Value, V::Error> {
     self
-      .accept_gen::<V>()
+      .accept_gen(&mut visitor)
       .and_then(|res| visitor.visit_not(res))
   }
 }
@@ -278,9 +282,9 @@ impl Expression<DifferenceArgs> {
   pub fn right_elem(&self) -> &RegionOrExpr {
     self.args.right_elem()
   }
-  pub fn accept<V: SpaceVisitor>(&self, visitor: V) -> Result<V::Value, V::Error> {
+  pub fn accept<V: SpaceVisitor>(&self, mut visitor: V) -> Result<V::Value, V::Error> {
     self
-      .accept_gen::<V>()
+      .accept_gen(&mut visitor)
       .and_then(|res| visitor.visit_difference(res))
   }
 }
@@ -291,9 +295,9 @@ impl Expression<UnionArgs> {
   pub fn elems(&self) -> &[RegionOrExpr] {
     self.args.elems()
   }
-  pub fn accept<V: SpaceVisitor>(&self, visitor: V) -> Result<V::Value, V::Error> {
+  pub fn accept<V: SpaceVisitor>(&self, mut visitor: V) -> Result<V::Value, V::Error> {
     self
-      .accept_gen::<V>()
+      .accept_gen(&mut visitor)
       .and_then(|res| visitor.visit_union(res))
   }
 }
@@ -304,9 +308,9 @@ impl Expression<IntersectionArgs> {
   pub fn elems(&self) -> &[RegionOrExpr] {
     self.args.elems()
   }
-  pub fn accept<V: SpaceVisitor>(&self, visitor: V) -> Result<V::Value, V::Error> {
+  pub fn accept<V: SpaceVisitor>(&self, mut visitor: V) -> Result<V::Value, V::Error> {
     self
-      .accept_gen::<V>()
+      .accept_gen(&mut visitor)
       .and_then(|res| visitor.visit_intersection(res))
   }
 }

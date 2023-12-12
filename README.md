@@ -310,8 +310,9 @@ is converted into:
 * [ ] Make a JS/Wasm library.
 * [X] Add everywhere builders, getters and setters like in the `FillFrameRefposFlavor` structure to make a clean API.
 * [X] Create a visitor.
-    + [X] implement an 'empty' visitor
-    + [ ] implement an 'echo' visitor
+    + [X] implement an `empty` visitor
+    + [X] implement an `echo` visitor
+    + [X] implement a `stcs2moc` visitor (available in [MOCLibRust](https://github.com/cds-astro/cds-moc-rust))
 * [ ] Implement `fold` to avoid too wide lines.
 * [ ] Support for STC XML serialization/deserialization?
 

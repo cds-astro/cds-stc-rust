@@ -126,15 +126,10 @@ pub trait RegionParams: Sized + Display {
 
 #[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
 pub struct AllSkyParams;
-/*impl AllSkyParams {
-  pub fn new() -> Self {
-    Self
-  }
-}*/
 impl RegionParams for AllSkyParams {
   const REGION_NAME: &'static str = "AllSky";
   fn accept<V: CompoundVisitor>(&self, visitor: &mut V) -> Result<V::Value, V::Error> {
-    visitor.visit_allsky(self)
+    visitor.visit_allsky()
   }
   fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     Ok((input, Self))
@@ -172,7 +167,7 @@ impl RegionParams for CircleParams {
   }
   fn parse<'a, E: NomErr<'a>>(input: &'a str) -> IResult<&'a str, Self, E> {
     map(
-      many_m_n(2, usize::MAX, preceded(multispace1, double)),
+      many_m_n(3, usize::MAX, preceded(multispace1, double)),
       |pos_and_radius| {
         let (radius, pos) = pos_and_radius.split_last().unwrap();
         let radius = *radius;
