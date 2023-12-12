@@ -1,5 +1,5 @@
 [package]
-name = "stc"
+name = "stc-s"
 version = "0.1.0"
 authors = ["F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"]
 description = "Rust implementation of a STC-S serializer/deserializer with JSON support."

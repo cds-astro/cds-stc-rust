@@ -1,6 +1,6 @@
 <meta charset="utf-8"/>
 
-# `stc` or `STClibRust`
+# `stc-s` or `STCSLibRust`
 
 Library to read/write IVOA STC-S strings in Rust, and to convert them from/to JSON.
 The parser has been implemented following:
@@ -312,7 +312,7 @@ is converted into:
 * [X] Create a visitor.
     + [X] implement an `empty` visitor
     + [X] implement an `echo` visitor
-    + [X] implement a `stcs2moc` visitor (available in [MOCLibRust](https://github.com/cds-astro/cds-moc-rust))
+    + [X] implement a `stcs2moc` visitor (available in [MOCLibRust](https://github.com/cds-astro/cds-moc-rust)
 * [ ] Implement `fold` to avoid too wide lines.
 * [ ] Support for STC XML serialization/deserialization?
 
