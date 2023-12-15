@@ -13,9 +13,9 @@ Other existing implementations:
 
 ## Motivations
 
-This library is to be used in [MOC lib Rust](https://github.com/cds-astro/cds-moc-rust) to support
-the creation of MOCs -- S-MOCs but also ST-MOCs, F-MOCs, ... -- from (simple) STC−S descriptions.
-E.g., this feature has been requested in [MOCPy](https://github.com/cds-astro/mocpy), 
+This library has been first developped to be used in [MOC lib Rust](https://github.com/cds-astro/cds-moc-rust) to support
+the creation of MOCs -- S-MOCs but why not ST-MOCs, F-MOCs, ... -- from STC−Strings.
+This feature has been requested in [MOCPy](https://github.com/cds-astro/mocpy), 
 see [issue #111](https://github.com/cds-astro/mocpy/issues/111).
 
 It may also be used in:
@@ -29,9 +29,10 @@ It may also be used in:
 
 ## Status
 
-This library is in an early stage of development.
-We are (reasonably) open to changes and we appreciate feedbacks.
-Please, provide us with more STC-S examples!
+Although this library is recent, and still has to be tested thoroughly,
+it is already in production in [MOC Lib Rust](https://github.com/cds-astro/cds-moc-rust) 
+to create S-MOCs from a STC-Strings.
+See examples in the [MOCCli README](https://github.com/cds-astro/cds-moc-rust/tree/main/crates/cli).
 
 
 ## STC-S String from API example
@@ -312,7 +313,8 @@ is converted into:
 * [X] Create a visitor.
     + [X] implement an `empty` visitor
     + [X] implement an `echo` visitor
-    + [X] implement a `stcs2moc` visitor (available in [MOCLibRust](https://github.com/cds-astro/cds-moc-rust)
+    + [X] implement a `stcs2moc` visitor (available in [MOCLibRust](https://github.com/cds-astro/cds-moc-rust))
+    + [ ] implement a visitor building a 'contains' method testing if a given point is inside the region or not
 * [ ] Implement `fold` to avoid too wide lines.
 * [ ] Support for STC XML serialization/deserialization?
 
