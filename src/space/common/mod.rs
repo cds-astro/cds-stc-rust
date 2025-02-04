@@ -25,7 +25,7 @@ use crate::space::common::region::RegionEnum;
 use crate::{common::SpaceTimeRefPos as RefPos, NomErr};
 use velocity::Velocity;
 
-/// `Ecliptic` assume to have epoch `J2000` with respect to `ICRS`.
+/// `Ecliptic` assumed to have epoch `J2000` with respect to `ICRS`.
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
 pub enum Frame {
   ICRS,

@@ -756,6 +756,26 @@ SpectralInterval BARYCENTER 4000 7000 unit Angstrom Resolution 300 600"#,
     );
   }
 
+  #[test]
+  fn test_from_tb() {
+    let ascii_str = "Union ICRS TOPOCENTER (Polygon 147.8 69.2 147.4 69.2 147.3 69.4 147.9 69.4 Polygon 147.9 69.7 147.6 69.7 147.5 69.9 148.0 69.9)";
+    match Stc::parse::<VerboseError<&str>>(ascii_str) {
+      Ok((rem, space)) => {
+        assert_eq!(rem, "", "Remaining: {}", rem);
+        println!("{:?}", space);
+      }
+      Err(err) => {
+        println!("Error: {:#?}", err);
+        match err {
+          Err::Incomplete(e) => println!("Error: {:?}", e),
+          Err::Error(e) => println!("Error: {}", convert_error(ascii_str, e)),
+          Err::Failure(e) => println!("Error: {}", convert_error(ascii_str, e)),
+        };
+        assert!(false)
+      }
+    }
+  }
+
   fn test(ascii_str: &str, json_str: &str, print_json: bool) {
     match Stc::parse::<VerboseError<&str>>(ascii_str) {
       Ok((rem, space)) => {

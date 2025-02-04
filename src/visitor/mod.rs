@@ -83,8 +83,8 @@ pub trait TimeVisitor: Sized {
 }
 
 // We may build this visitor for elements in SpaceVisitor
-// e.g. take into params convertsion of coordiantes to be applied everywhere, ...
-// So thus Visitor is actually build from the SpaceVisitor
+// e.g. take into params conversion of coordinates to be applied everywhere, ...
+// so this Visitor is actually build from the SpaceVisitor
 pub trait CompoundVisitor: Sized {
   /// Type of the value returned by an operation.
   type Value;
